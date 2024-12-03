@@ -5,6 +5,7 @@
 //This is not perfect, but it's good enough!
 //Supply voltage/current can be monitored with TrashPower
 
+
 #include <FastLED.h>
 
 FASTLED_USING_NAMESPACE
@@ -48,12 +49,7 @@ void setup() {
 
 // List of patterns to cycle through.  Each is defined as a separate function below.
 typedef void (*SimplePatternList[])();
-//SimplePatternList gPatterns = { bivar_trig, max_white_seq, rainbow_seq_lines, };
-//SimplePatternList gPatterns = { bivar_trig};
-//SimplePatternList gPatterns = { black_white_flash_rand };
-//SimplePatternList gPatterns = { synthwave_highway };
-//SimplePatternList gPatterns = { colour_pinwheel };
-SimplePatternList gPatterns = { max_white_seq, rainbow_seq_lines, black_white_flash, black_white_flash_rand, synthwave_highway, colour_pinwheel, bivar_trig };
+SimplePatternList gPatterns = { line_seq_w, line_seq_r, line_seq_g, line_seq_b, stack_white_fade_check, flash_black_white, line_seq_rainbow, colour_pinwheel, bivar_trig };
 
 uint8_t gCurrentPatternNumber = 0; // Index number of which pattern is current
 uint8_t gHue = 0; // rotating "base color" used by many of the patterns
@@ -105,7 +101,7 @@ void nextPattern()
 // correct order of the lines
 // full functionality of each LED in RGB
 // voltage drop along length of strip resulting in colour drift (orange)
-void max_white_seq() 
+void line_seq_w() 
 {
   static int line;
   EVERY_N_SECONDS( 1 ){ ++line; }
@@ -120,8 +116,86 @@ void max_white_seq()
   }
 }
 
+//Switch on each line as red in sequence: 1,2,3,4,5,6
+void line_seq_r() 
+{
+  static int line;
+  EVERY_N_SECONDS( 1 ){ ++line; }
+  if(line >= NUM_LINES){ line = 0; }
+  if(first_run){
+    line = 0;
+    first_run = false;
+  }
+  // FastLED's built-in rainbow generator
+  if(line < NUM_LINES ){
+    fill_solid(leds[line], NUM_LEDS, CRGB( 255, 0, 0)); 
+  }
+}
+
+
+//Switch on each line as green in sequence: 1,2,3,4,5,6
+void line_seq_g() 
+{
+  static int line;
+  EVERY_N_SECONDS( 1 ){ ++line; }
+  if(line >= NUM_LINES){ line = 0; }
+  if(first_run){
+    line = 0;
+    first_run = false;
+  }
+  // FastLED's built-in rainbow generator
+  if(line < NUM_LINES ){
+    fill_solid(leds[line], NUM_LEDS, CRGB( 0, 255, 0));
+  }
+}
+
+//Switch on each line as blue in sequence: 1,2,3,4,5,6
+void line_seq_b() 
+{
+  static int line;
+  EVERY_N_SECONDS( 1 ){ ++line; }
+  if(line >= NUM_LINES){ line = 0; }
+  if(first_run){
+    line = 0;
+    first_run = false;
+  }
+  // FastLED's built-in rainbow generator
+  if(line < NUM_LINES ){
+    fill_solid(leds[line], NUM_LEDS, CRGB( 0, 0, 255));
+  }
+}
+
+//Fill from the end with white at maximum brightness to observe colour fade in strip due to voltage drop
+void stack_white_fade_check()
+{
+  static int row_fill_start;
+  if(first_run){
+    row_fill_start = 0;
+    first_run = false;
+  }
+
+  int advance_rows = 2; //On each iteration, advance this many rows  
+  int row_fill_stop = row_fill_start + advance_rows;
+
+  for(int row = row_fill_start; row < row_fill_stop; ++row){
+    for(int line = 0; line < NUM_LINES; ++line){
+
+      //array bound safety checks
+      if(row >= 0 && row < NUM_LEDS){
+
+        //Reverse direction:
+        int row_reverse = NUM_LEDS-row;
+        leds[line][row_reverse] = CRGB( 255, 255, 255);
+      }
+
+    }
+  }
+  row_fill_start = row_fill_stop;
+
+}
+
 //Validates that pattern is being sent
-void rainbow_seq_lines() 
+void line_seq_rainbow() 
 {
   static int line;
   EVERY_N_SECONDS( 1 ){ ++line; }
@@ -133,6 +207,18 @@ void rainbow_seq_lines()
   // FastLED's built-in rainbow generator
   if(line < NUM_LINES ){
     fill_rainbow( leds[line], NUM_LEDS, gHue, 7);
+  }
+}
+
+//This function is useful to identify problems in communication of LED config due to high current transients
+void flash_black_white(){
+  static bool state;
+  state = !state;
+  if(state){
+    fill_solid(leds[0], NUM_LEDS*NUM_LINES, CRGB::White);
+  }
+  else{
+    fill_solid(leds[0], NUM_LEDS*NUM_LINES, CRGB::Black);
   }
 }
 
@@ -181,37 +267,4 @@ void colour_pinwheel(){
   }
 }
 
-//This function is useful to identify problems in communication of LED config due to high current transients
-void black_white_flash(){
-  static bool state;
-  state = !state;
-  if(state){
-    fill_solid(leds[0], NUM_LEDS*NUM_LINES, CRGB::White);
-  }
-  else{
-    fill_solid(leds[0], NUM_LEDS*NUM_LINES, CRGB::Black);
-  }
-}
 
-//This function is useful to identify problems in communication of LED config due to high current transients
-void black_white_flash_rand(){
-  long state = random(0,2);
-  if(state == 1){
-    fill_solid(leds[0], NUM_LEDS*NUM_LINES, CRGB::White);
-  }
-  else{
-    fill_solid(leds[0], NUM_LEDS*NUM_LINES, CRGB::Black);
-  }
-}
-
-//This function is useful to identify problems in communication of LED config due to high current transients
-void synthwave_highway(){
-  static bool state;
-  state = !state;
-  if(state){
-    fill_solid(leds[0], NUM_LEDS*NUM_LINES, CRGB::LightSeaGreen);
-  }
-  else{
-    fill_solid(leds[0], NUM_LEDS*NUM_LINES, CRGB::Black);
-  }
-}
